@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
       { find: '@openchamber/ui', replacement: path.resolve(__dirname, '../ui/src') },
       { find: '@vscode', replacement: path.resolve(__dirname, './webview') },
       { find: '@', replacement: path.resolve(__dirname, '../ui/src') },
+      { find: 'node:child_process', replacement: path.resolve(__dirname, './webview/node-process-shim.ts') },
     ],
   },
   worker: {
@@ -53,7 +54,6 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'webview/index.html'),
-      external: ['node:child_process', 'node:fs', 'node:path', 'node:url'],
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',

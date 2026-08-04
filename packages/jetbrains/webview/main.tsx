@@ -5,8 +5,6 @@ interface VSCodeAPI {
 }
 
 function createDevBridge(): VSCodeAPI {
-  let counter = 0;
-  const pending = new Map<string, { resolve: (value: unknown) => void; reject: (reason: Error) => void }>();
   return {
     postMessage(message: unknown) {
       console.log('[JetBrainsBridge:dev:post]', message);

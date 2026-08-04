@@ -97,7 +97,10 @@ class BridgeMessageHandler(
                 logger.warn("Bridge handler error for ${request.type}", e)
                 BridgeResponse(request.id, request.type, false, error = e.message ?: "Unknown error")
             }
-            withContext(Dispatchers.Main) { respond(response) }
+            // The panel schedules the actual JCEF call on the EDT. Avoid a
+            // second dispatcher hop here so bridge replies are not held up by
+            // the IDE's Main dispatcher while the project is loading.
+            respond(response)
         }
     }
 

@@ -64,6 +64,12 @@ bun run dev:webview   # Vite HMR on localhost:5174
 
 The plugin HTML loads the production bundle by default. To use the dev server, set the `OPENCHAMBER_JETBRAINS_DEV_SERVER` environment variable or update `OpenChamberPanel.kt` to inject `devServerUrl`.
 
+## Debugging
+
+1. In the IDE, open **Help | Diagnostic Tools | Debug Log Settings** and add `#com.openchamber.jetbrains`. Reproduce the issue, then use **Help | Show Log in Explorer** and inspect `idea.log`. This includes host errors and JCEF console messages.
+2. To inspect the webview directly, enable the `ide.browser.jcef.contextMenu.devTools.enabled` registry key through **Help | Find Action | Registry**. Right-click the OpenChamber panel and select the DevTools entry. JCEF DevTools also listens on port `9222` by default; change it with `ide.browser.jcef.debug.port` if that port is occupied.
+3. For local development, run `bun run jetbrains:dev`; its sandbox IDE writes logs to its own **Help | Show Log in Explorer** location.
+
 ## Project Structure
 
 ```

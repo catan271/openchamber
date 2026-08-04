@@ -170,8 +170,10 @@ class OpenCodeManager(
     }
 
     private fun buildCliCommand(cliPath: String, port: Int, password: String): List<String> {
-        val base = listOf(cliPath, "server", "--port", port.toString())
-        return if (System.getProperty("os.name").orEmpty().lowercase().contains("win")) {
+        val base = listOf(cliPath, "serve", "--hostname", "127.0.0.1", "--port", port.toString())
+        val isWindowsBatchScript = System.getProperty("os.name").orEmpty().lowercase().contains("win") &&
+            (cliPath.endsWith(".cmd", ignoreCase = true) || cliPath.endsWith(".bat", ignoreCase = true))
+        return if (isWindowsBatchScript) {
             listOf("cmd.exe", "/c", "call") + base
         } else {
             base
@@ -190,6 +192,9 @@ class OpenCodeManager(
         val url = apiUrl ?: return false
         val deadline = System.currentTimeMillis() + READY_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
+            if (process?.isAlive == false) {
+                return false
+            }
             try {
                 val request = Request.Builder()
                     .url("$url/health")

@@ -37,7 +37,10 @@ class OpenChamberPanel(
 
     val component: JPanel = JPanel(BorderLayout())
     private var browser: JcefBrowserWrapper? = null
+    private var assetServer: WebviewAssetServer? = null
     private val settings = OpenChamberSettings.getInstance(project)
+    @Volatile private var connectionStatus = initialConnectionStatus
+    @Volatile private var connectionError: String? = null
 
     init {
         initialize()
@@ -54,7 +57,10 @@ class OpenChamberPanel(
             return
         }
 
-        browser = JcefBrowserWrapper().also { browser ->
+        val initializedBrowser = JcefBrowserWrapper()
+        browser = initializedBrowser
+
+        initializedBrowser.let { browser ->
             Disposer.register(project, browser)
             component.add(browser.component, BorderLayout.CENTER)
 
@@ -68,18 +74,27 @@ class OpenChamberPanel(
                     logger.warn("Failed to parse bridge message: $raw", e)
                 }
             }
-
-            loadHtml()
+            browser.onPageLoaded {
+                dispatchConnectionStatus()
+            }
         }
+
+        loadHtml()
     }
 
     private fun loadHtml() {
+        // A reload can be queued on the EDT while the project is closing. In
+        // that case the panel has already released its JCEF browser and there
+        // is no webview left to load.
+        val activeBrowser = browser ?: return
+
         try {
             val webviewDir = ResourceResolver.resolveWebviewDirectory().toFile()
-            val html = buildWebviewHtml()
+            val html = buildWebviewHtml(activeBrowser.postMessageQuery())
             File(webviewDir, "index.html").writeText(html, Charsets.UTF_8)
-            val indexUrl = File(webviewDir, "index.html").toURI().toString()
-            browser?.loadUrl(indexUrl)
+            assetServer?.dispose()
+            assetServer = WebviewAssetServer(webviewDir.toPath())
+            activeBrowser.loadUrl(assetServer!!.indexUrl)
         } catch (e: Exception) {
             logger.error("Failed to load OpenChamber webview", e)
             component.removeAll()
@@ -99,14 +114,20 @@ class OpenChamberPanel(
     }
 
     fun postConnectionStatus(status: String, error: String?) {
+        connectionStatus = status
+        connectionError = error
+        dispatchConnectionStatus()
+    }
+
+    private fun dispatchConnectionStatus() {
         postRaw(
             json.encodeToString(buildJsonObject {
                 put("type", "connectionStatus")
-                put("status", status)
-                if (error == null) {
+                put("status", connectionStatus)
+                if (connectionError == null) {
                     put("error", JsonNull)
                 } else {
-                    put("error", error)
+                    put("error", connectionError!!)
                 }
             })
         )
@@ -134,14 +155,13 @@ class OpenChamberPanel(
         }
     }
 
-    private fun buildWebviewHtml(): String {
+    private fun buildWebviewHtml(postMessageQuery: String): String {
         val workspaceFolder = project.basePath?.replace("\\", "/") ?: ""
         val theme = themeVariant()
-        val initialStatus = initialConnectionStatus
+        val initialStatus = connectionStatus
         val extensionVersion = "1.14.1"
         val platform = System.getProperty("os.name", "")
         val arch = System.getProperty("os.arch", "")
-
         val configJson = json.encodeToString(buildJsonObject {
             put("workspaceFolder", workspaceFolder)
             putJsonArray("workspaceFolders") {
@@ -189,20 +209,21 @@ class OpenChamberPanel(
     window.process = window.process || { env: { NODE_ENV: 'production' }, platform: '', version: '', browser: true };
     window.__JETBRAINS_CONFIG__ = $configJson;
     window.__VSCODE_CONFIG__ = window.__JETBRAINS_CONFIG__;
-    window.__OPENCHAMBER_HOME__ = "${workspaceFolder.replace("\\", "\\\\")}";
+     window.__OPENCHAMBER_HOME__ = "${workspaceFolder.replace("\\", "\\\\")}";
+     window.__OPENCHAMBER_JCEF_POST__ = function(message) {
+       $postMessageQuery;
+     };
 
-    function acquireVsCodeApi() {
+     function acquireVsCodeApi() {
       return window.__OPENCHAMBER_JETBRAINS_BRIDGE__;
     }
 
     window.__OPENCHAMBER_JETBRAINS_BRIDGE__ = (function() {
-      let onMessageCallback = null;
-      return {
-        postMessage: function(message) {
-          if (window.__OPENCHAMBER_JCEF_POST__) {
-            window.__OPENCHAMBER_JCEF_POST__(JSON.stringify(message));
-          }
-        },
+       let onMessageCallback = null;
+       return {
+         postMessage: function(message) {
+           window.__OPENCHAMBER_JCEF_POST__(message);
+         },
         getState: function() { return null; },
         setState: function() {},
         onMessage: function(callback) { onMessageCallback = callback; },
@@ -250,6 +271,8 @@ class OpenChamberPanel(
     }
 
     override fun dispose() {
+        assetServer?.dispose()
+        assetServer = null
         browser?.dispose()
         browser = null
     }

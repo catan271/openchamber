@@ -7,7 +7,6 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.CefSettings
 import org.cef.browser.CefBrowser
-import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.Component
@@ -23,6 +22,7 @@ class JcefBrowserWrapper : Disposable {
     private val browser: JBCefBrowser
     private val jsQuery: JBCefJSQuery
     private var messageHandler: ((String) -> Unit)? = null
+    private var pageLoadHandler: (() -> Unit)? = null
 
     val component: Component
         get() = browser.component
@@ -44,12 +44,6 @@ class JcefBrowserWrapper : Disposable {
             null
         }
 
-        browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
-            override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
-                injectBridgePostFunction()
-            }
-        }, browser.cefBrowser)
-
         browser.jbCefClient.addDisplayHandler(object : CefDisplayHandlerAdapter() {
             override fun onConsoleMessage(
                 browser: CefBrowser?,
@@ -64,18 +58,18 @@ class JcefBrowserWrapper : Disposable {
                 return true
             }
         }, browser.cefBrowser)
+
+        browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+            override fun onLoadEnd(browser: CefBrowser?, frame: org.cef.browser.CefFrame?, httpStatusCode: Int) {
+                if (frame?.isMain == true) {
+                    pageLoadHandler?.invoke()
+                }
+            }
+        }, browser.cefBrowser)
     }
 
-    private fun injectBridgePostFunction() {
-        val query = jsQuery.inject("JSON.stringify(message)")
-        executeJavaScript(
-            """
-            window.__OPENCHAMBER_JCEF_POST__ = function(message) {
-              $query;
-            };
-            """.trimIndent()
-        )
-    }
+    /** JavaScript for forwarding a webview message through this browser's query channel. */
+    fun postMessageQuery(): String = jsQuery.inject("JSON.stringify(message)")
 
     fun loadHtml(html: String, url: String) {
         browser.loadHTML(html, url)
@@ -91,6 +85,10 @@ class JcefBrowserWrapper : Disposable {
 
     fun onMessage(handler: (String) -> Unit) {
         messageHandler = handler
+    }
+
+    fun onPageLoaded(handler: () -> Unit) {
+        pageLoadHandler = handler
     }
 
     override fun dispose() {

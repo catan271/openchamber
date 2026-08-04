@@ -26,7 +26,9 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
     }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    // IntelliJ supplies its own coroutine runtime. Bundling another copy causes
+    // ServiceLoader to mix platform coroutine handlers with plugin classes.
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")

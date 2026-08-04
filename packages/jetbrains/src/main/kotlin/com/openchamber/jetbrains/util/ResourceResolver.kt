@@ -31,7 +31,7 @@ object ResourceResolver {
         val classLoader = ResourceResolver::class.java.classLoader
 
         // Try the classpath resource root.
-        val resourceUrl = classLoader.getResource("webview/assets/index.js")
+        val resourceUrl = classLoader.getResource("webview/index.html")
             ?: classLoader.getResource("webview")
             ?: throw IllegalStateException("Webview resources not found on classpath")
 

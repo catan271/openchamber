@@ -7,6 +7,8 @@ class OpenChamberStartupActivity : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         val service = OpenChamberProjectService.getInstance(project)
-        service.getOpenCodeManager().start().await()
+        // Do not hold IntelliJ project startup on the OpenCode readiness poll.
+        // The manager publishes connecting/connected/error status to the panel.
+        service.getOpenCodeManager().start()
     }
 }
