@@ -1,0 +1,32 @@
+{
+  "name": "@openchamber/jetbrains",
+  "version": "1.14.1",
+  "private": true,
+  "description": "OpenChamber JetBrains plugin (IntelliJ IDEA, WebStorm, etc.)",
+  "scripts": {
+    "build": "bun run build:webview && bun run build:plugin",
+    "build:plugin": "node scripts/gradle.mjs buildPlugin",
+    "build:webview": "vite build",
+    "dev": "concurrently -n \"webview,plugin\" -c \"cyan,magenta\" \"bun run dev:webview\" \"bun run run-ide\"",
+    "dev:webview": "vite --host localhost --port 5174 --strictPort",
+    "run-ide": "node scripts/gradle.mjs runIde",
+    "type-check": "tsc --noEmit -p tsconfig.webview.json",
+    "lint": "bun x eslint --ext .ts,.tsx webview",
+    "clean": "node scripts/gradle.mjs clean && node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@openchamber/ui": "workspace:*",
+    "@opencode-ai/sdk": "1.17.12",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "typescript": "~5.9.0",
+    "vite": "^7.1.2"
+  }
+}

@@ -1,0 +1,82 @@
+<idea-plugin>
+    <id>com.openchamber.jetbrains</id>
+    <name>OpenChamber</name>
+    <version>1.14.1</version>
+    <vendor>OpenChamber</vendor>
+
+    <description><![CDATA[
+        OpenChamber brings an AI coding assistant into JetBrains IDEs.
+        This plugin reuses the same shared UI and OpenCode runtime as the VS Code extension.
+    ]]></description>
+
+    <change-notes><![CDATA[
+        Initial JetBrains port. Provides chat sidebar, editor context actions,
+        and OpenCode CLI management via JCEF webview.
+    ]]></change-notes>
+
+    <idea-version since-build="243" until-build="251.*"/>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool window -->
+        <toolWindow
+            id="OpenChamber"
+            icon="/icons/openchamber.svg"
+            anchor="right"
+            secondary="true"
+            factoryClass="com.openchamber.jetbrains.OpenChamberToolWindowFactory"/>
+
+        <!-- Project service -->
+        <projectService
+            serviceImplementation="com.openchamber.jetbrains.OpenChamberProjectService"/>
+
+        <!-- Startup activity -->
+        <postStartupActivity
+            implementation="com.openchamber.jetbrains.OpenChamberStartupActivity"/>
+
+        <!-- Settings -->
+        <projectConfigurable
+            parentId="tools"
+            id="openchamber.settings"
+            displayName="OpenChamber"
+            instance="com.openchamber.jetbrains.settings.OpenChamberSettingsConfigurable"/>
+    </extensions>
+
+    <actions>
+        <action
+            id="openchamber.addToContext"
+            class="com.openchamber.jetbrains.actions.AddToContextAction"
+            text="Add to OpenChamber Context"
+            description="Add selected text to OpenChamber chat context">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopyPasteGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift O"/>
+        </action>
+
+        <action
+            id="openchamber.explain"
+            class="com.openchamber.jetbrains.actions.ExplainAction"
+            text="Explain with OpenChamber"
+            description="Explain selected code with OpenChamber">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="openchamber.addToContext"/>
+        </action>
+
+        <action
+            id="openchamber.improveCode"
+            class="com.openchamber.jetbrains.actions.ImproveCodeAction"
+            text="Improve Code with OpenChamber"
+            description="Improve selected code with OpenChamber">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="openchamber.explain"/>
+        </action>
+
+        <action
+            id="openchamber.openSidebar"
+            class="com.openchamber.jetbrains.actions.OpenSidebarAction"
+            text="Open OpenChamber"
+            description="Open the OpenChamber sidebar">
+            <add-to-group group-id="ViewMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
